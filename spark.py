@@ -19,11 +19,14 @@ spark_streaming_context = StreamingContext(spark_context, 20)
 kafka_stream = KafkaUtils.createStream(spark_streaming_context, 'localhost:2181', 'spark-streaming', {'customer_data':1})
 parsed_data = kafka_stream.map(lambda v: json.loads(v[1]))
 parsed_data.count().map(lambda x:'Records in this batch : %s' % x).pprint()
-parsed_data.pprint()
+#parsed_data.pprint()
 distance_dstream = parsed_data.map(lambda line: line['Distance'])
 #TransformedDStream to RDD
 #rdd=distance_dstream.foreachRDD(lambda rdd: rdd.foreachPartition(result))
 rdd=distance_dstream.foreachRDD(lambda rdd: rdd.foreachPartition(result))
+#filtering data less than 100 distance 
+stream=parsed_data.filter(lambda line: int(line['Distance']) <=100)
+stream.pprint()
 def result(partiton):
     for values in partiton:
         #print("afterloop")
