@@ -17,15 +17,18 @@ INFILE="./mall_customers.csv"
 cust_df=ca.create_cust_df(INFILE)
 clf=ca.generate_spend(cust_df)
 cstdf,k_means = ca.create_cluster(cust_df)
-
+"""
 cust_info=pd.DataFrame([[  0,  34,  78], [  0,  65,  63], [  1,  35,  19]])
 spend=clf.predict(cust_info.values)
 print("spend info : ", spend)
 
-clsinput=pd.DataFrame([[0,64,19,3],[1,20,16,6]])
-pred_cluster=k_means.predict(clsinput)
+#clsinput=pd.DataFrame([[0,64,19,3],[1,20,16,6]])
+#pred_cluster=k_means.predict(clsinput)
+print(cust_info.columns)
+cust_info.loc[:,"Spending Score (1-100)"]=spend
+pred_cluster=k_means.predict(cust_info)
 print("predicted cluster : ", pred_cluster)
-
+"""
 spark_context = SparkContext(appName="kafka-spark-Streaming")
 spark_context.setLogLevel("WARN")
 
@@ -70,18 +73,50 @@ def send_to_kafka_matched(partition):
 		message = json.dumps(str(record))
 		producer.produce(message.encode('ascii'))
 
+def get_offer(customer_segment):
+	if customer_segment == 0:
+		return ("offer1")
+	elif customer_segment == 1:
+		return ("offer2")
+	elif customer_segment == 2:
+		return ("offer3")
+	elif customer_segment == 3:
+		return ("offer4")
+	elif customer_segment == 4:
+		return ("offer5")
+	else:
+		return ("offer6")
+
 def get_customer_data(partition):
 	#counter=0
 	for record in partition: #this is only 1 record.
 		### record is a dict, partition is a json structure.
-	
-		print(record['Gender'],record['Age'],record['Annual Income (k$)'])
+		# use clf.predict(ndarray) to predict the spending
+		# use k_means.predict(dataframe) to predict the cluster
+		if(record['Gender'] == 'Male'):
+			record['Gender']=0
+		else:
+			record['Gender']=1
+		incustdata=pd.DataFrame([record])
+		incustdata['Spending Score (1-100)']=0
+		incustdata_features=incustdata[['Gender', 'Age', 'Annual Income (k$)']] #Features
+		spend = clf.predict(incustdata_features.values)
+		print("predicted spend : ", spend)
+
+		# Next step to calculate the customer segment
+		incustdata["Spending Score (1-100)"]=spend
+		incustdata_elements=incustdata[['Gender', 'Age', 'Annual Income (k$)' ,'Spending Score (1-100)']]
+		#print("customer data with predicted spend : ", incustdata_elements)
+		pred_cus_segment=k_means.predict(incustdata_elements)
+		print("predicted customer segment : ", pred_cus_segment)
+		offer=get_offer(pred_cus_segment)
+		print("offer to release : ", offer)
 
 	#	counter+=1 
 	#print(counter)
 
 pot_cust_data=pot_cust_stream.foreachRDD(lambda rdd: rdd.foreachPartition(get_customer_data)) #this gets called for each record individually.
-print(type(pot_cust_data),pot_cust_data)
+#print(type(pot_cust_data),pot_cust_data)
 #parsed_data.foreachRDD()
 #statuswise_bus_counts.foreachRDD(lambda rdd: rdd.foreachPartition(send_to_kafka_matched))
 
