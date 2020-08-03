@@ -53,6 +53,11 @@ def get_offer(customer_segment):
 		return ("offer6")
 
 def get_customer_data(partition):
+	client = KafkaClient(hosts="localhost:9092")
+	#create a topic for customer offer.
+	topic = client.topics['customer_offer']
+	producer = topic.get_sync_producer()
+
 	for record in partition: #this is only 1 record.
 		### record is a dict, partition is a json structure.
 		# use clf.predict(ndarray) to predict the spending
@@ -78,7 +83,11 @@ def get_customer_data(partition):
 		record['Spending Score (1-100)']=spend[0]
 		record['segment']=pred_cus_segment[0]
 		record['offer']=offer
+		print(type(spend))
 		print(record)
+		# Writing the record offer data to a topic
+		message = json.dumps(str(record))
+		producer.produce(message.encode('ascii'))  
 
 
 pot_cust_stream.foreachRDD(lambda rdd: rdd.foreachPartition(get_customer_data)) #this gets called for each record individually.
