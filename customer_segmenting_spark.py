@@ -13,7 +13,7 @@ import pyspark.sql
 from pykafka import KafkaClient
 
 #varibles
-INFILE="./mall_customers.csv"
+INFILE="./customer_data.csv"
 cust_df=ca.create_cust_df(INFILE)
 clf=ca.generate_spend(cust_df)
 cstdf,k_means = ca.create_cluster(cust_df)
@@ -29,14 +29,6 @@ parsed_data.count().map(lambda x:'Records in this batch B1: %s' % x).pprint()
 
 pot_cust_stream=parsed_data.filter(lambda line: int(line['Distance']) <=100)
 print(pot_cust_stream.pprint())
-
-def send_to_kafka_matched(partition):
-	client = KafkaClient(hosts="localhost:9092")
-	topic = client.topics['t2']
-	producer = topic.get_sync_producer()
-	for record in partition:
-		message = json.dumps(str(record))
-		producer.produce(message.encode('ascii'))
 
 def get_offer(customer_segment):
 	if customer_segment == 0:
