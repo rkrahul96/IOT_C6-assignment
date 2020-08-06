@@ -20,7 +20,7 @@ from sklearn.metrics import silhouette_score
 from sklearn.metrics import confusion_matrix
 from imblearn.over_sampling import RandomOverSampler
 
-INFILE="./mall_customers.csv"
+INFILE="./customer_data.csv"
 # <b> create a dataframe by reading the csv and check for bad records
 def create_cust_df(INFILE):
     cust_df = pd.read_csv(INFILE,index_col=0)
